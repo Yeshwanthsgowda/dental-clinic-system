@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "build": "npx prisma generate && npx prisma migrate deploy",
+    "build": "npx prisma generate && npx prisma db push --accept-data-loss",
     "migrate": "npx prisma migrate deploy",
     "generate": "npx prisma generate",
     "studio": "npx prisma studio"
