@@ -1,0 +1,161 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Day {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum TreatmentCategory {
+  CLEANING
+  FILLING
+  ROOT_CANAL
+  EXTRACTION
+  ORTHODONTICS
+  COSMETIC
+  SURGERY
+}
+
+model Doctor {
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  password       String
+  specialization String
+  experience     Int
+  description    String?
+  profilePic     String?
+  fees           Float
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  schedules         Schedule[]
+  scheduleOverrides ScheduleOverride[]
+  treatments        Treatment[]
+  appointments      Appointment[]
+  reviews           Review[]
+
+  @@map("doctors")
+}
+
+model Patient {
+  id         String   @id @default(cuid())
+  name       String
+  email      String   @unique
+  password   String
+  phone      String?
+  address    String?
+  profilePic String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  appointments Appointment[]
+  reviews      Review[]
+
+  @@map("patients")
+}
+
+model Schedule {
+  id        String   @id @default(cuid())
+  doctorId  String
+  day       Day
+  isOff     Boolean  @default(false)
+  startTime String   @default("09:00")
+  endTime   String   @default("17:00")
+  offSlots  String[] @default([])
+  
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, day])
+  @@map("schedules")
+}
+
+model ScheduleOverride {
+  id        String   @id @default(cuid())
+  doctorId  String
+  date      DateTime
+  isOff     Boolean  @default(false)
+  startTime String?
+  endTime   String?
+  offSlots  String[] @default([])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, date])
+  @@map("schedule_overrides")
+}
+
+model Treatment {
+  id          String            @id @default(cuid())
+  name        String
+  description String?
+  category    TreatmentCategory
+  duration    Int               // in minutes
+  price       Float
+  doctorId    String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  doctor       Doctor        @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+
+  @@map("treatments")
+}
+
+model Appointment {
+  id          String            @id @default(cuid())
+  patientId   String
+  doctorId    String
+  treatmentId String
+  date        DateTime
+  timeSlot    String
+  status      AppointmentStatus @default(PENDING)
+  notes       String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  patient   Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor    Doctor    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  treatment Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+  review    Review?
+
+  @@unique([doctorId, date, timeSlot])
+  @@map("appointments")
+}
+
+model Review {
+  id            String   @id @default(cuid())
+  appointmentId String   @unique
+  patientId     String
+  doctorId      String
+  rating        Int      @db.SmallInt
+  comment       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  patient     Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor      Doctor      @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}
